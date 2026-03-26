@@ -1,0 +1,9 @@
+services:
+  doc-watcher:
+    build: .
+    container_name: optoz-doc-watcher
+    volumes:
+      - /home/optoz/Desktop/Optoz_v0.1:/project:ro
+      - ./output:/app/output
+      - ./config.yaml:/app/config.yaml:ro
+    restart: unless-stopped
