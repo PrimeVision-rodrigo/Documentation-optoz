@@ -1,17 +1,21 @@
 """
-Optoz Documentation Watcher — Entry Point
+Documentation Watcher — Entry Point
 
-Monitors the Optoz_v0.1 project directory for file changes and maintains
-5 living documentation files that stay in sync with the codebase.
+Monitors any project directory for file changes and maintains
+living documentation files that stay in sync with the codebase.
 """
 
+import functools
+import http.server
 import logging
 import signal
 import sys
+import threading
 import time
 
 from watchdog.observers.polling import PollingObserver
 
+from watcher.analyzers.project_detector import detect_project
 from watcher.change_tracker import ChangeTracker
 from watcher.config import Config
 from watcher.file_monitor import ProjectFileHandler
@@ -37,14 +41,26 @@ _running = True
 def main():
     global _running
 
-    log.info("Starting Optoz Documentation Watcher")
-
-    # Load config
+    # Load config (supports CLI args, env vars, config.yaml)
     config = Config()
-    config.output_path.mkdir(parents=True, exist_ok=True)
 
+    log.info(f"Documentation Watcher starting")
     log.info(f"Project path: {config.project_path}")
     log.info(f"Output path:  {config.output_path}")
+
+    # Auto-detect project structure
+    log.info("Detecting project structure...")
+    profile = detect_project(config.project_path, config.watch_excludes)
+    config.apply_profile(profile)
+
+    log.info(f"Project: {config.project_name}")
+    log.info(f"Type: {profile.project_type}")
+    log.info(f"Languages: {', '.join(f'{lang} ({lines:,} lines)' for lang, lines in sorted(profile.languages.items(), key=lambda x: -x[1])[:5])}")
+    if profile.frameworks:
+        log.info(f"Frameworks: {', '.join(profile.frameworks)}")
+    log.info(f"Features: frontend={profile.has_frontend}, backend={profile.has_backend}, docker={profile.has_docker}, events={profile.has_event_system}")
+
+    config.output_path.mkdir(parents=True, exist_ok=True)
     log.info(f"Flush interval: {config.flush_interval}s")
 
     # Set up classifier and tracker
@@ -85,6 +101,11 @@ def main():
     observer.start()
     log.info(f"Watching for changes (polling every {config.poll_interval}s)...")
 
+    # Start HTTP server if port specified
+    http_server = None
+    if config.port:
+        http_server = _start_http_server(config.output_path, config.port)
+
     # Signal handlers for clean shutdown
     def shutdown(signum, frame):
         global _running
@@ -114,6 +135,9 @@ def main():
 
     observer.stop()
     observer.join()
+    if http_server:
+        http_server.shutdown()
+        log.info("HTTP server stopped")
     log.info("Watcher stopped")
 
 
@@ -137,6 +161,16 @@ def _flush(tracker: ChangeTracker, generators: list):
                     log.info(f"  Updated {gen.filename}")
             except Exception as e:
                 log.error(f"  Failed to update {gen.filename}: {e}")
+
+
+def _start_http_server(directory, port):
+    """Start a background HTTP server serving the output directory."""
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
+    server = http.server.HTTPServer(("0.0.0.0", port), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    log.info(f"Dashboard available at http://localhost:{port}/dashboard.html")
+    return server
 
 
 if __name__ == "__main__":

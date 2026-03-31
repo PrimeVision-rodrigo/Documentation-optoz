@@ -27,10 +27,20 @@ class VisualDesignGenerator(BaseGenerator):
     def update(self, changes: list[Change]) -> str | None:
         return self._build()
 
+    @property
+    def _profile(self):
+        return self.config.profile
+
     def _build(self) -> str:
         content = md.heading(1, "Visual Design Log & Layout")
-        content += f"> Auto-generated on {md.timestamp()} | Optoz AI Documentation Watcher\n\n"
+        content += f"> Auto-generated on {md.timestamp()} | Documentation Watcher\n\n"
         content += md.divider()
+
+        if not self._profile or not self._profile.has_frontend:
+            content += "_No frontend detected in this project._\n\n"
+            content += "The watcher looks for React/Vue/Angular/Svelte entry points "
+            content += "(App.tsx, App.vue, etc.) and pages/components directories.\n\n"
+            return content
 
         # Navigation / Routing
         content += self._build_navigation()
@@ -46,11 +56,14 @@ class VisualDesignGenerator(BaseGenerator):
     def _build_navigation(self) -> str:
         section = md.heading(2, "Navigation & Routing")
 
-        app_tsx = self.project / "my-app" / "src" / "App.tsx"
-        if not app_tsx.is_file():
-            return section + "_App.tsx not found._\n\n"
+        if not self._profile or not self._profile.frontend_entry:
+            return section + "_No frontend entry point found._\n\n"
 
-        parsed = parse_app_tsx(app_tsx)
+        app_file = self.project / self._profile.frontend_entry
+        if not app_file.is_file():
+            return section + f"_Entry point `{self._profile.frontend_entry}` not found._\n\n"
+
+        parsed = parse_app_tsx(app_file)
 
         # Routes
         routes = parsed.get("routes", [])
@@ -84,11 +97,23 @@ class VisualDesignGenerator(BaseGenerator):
     def _build_page_breakdown(self) -> str:
         section = md.heading(2, "Page Components")
 
-        pages_dir = self.project / "my-app" / "src" / "pages"
-        if not pages_dir.is_dir():
-            return section + "_No pages directory._\n\n"
+        if not self._profile or not self._profile.frontend_pages_dir:
+            return section + "_No pages directory detected._\n\n"
 
-        for page_file in sorted(pages_dir.glob("*.tsx")):
+        pages_dir = self.project / self._profile.frontend_pages_dir
+        if not pages_dir.is_dir():
+            return section + "_Pages directory not found._\n\n"
+
+        # Support multiple frontend file types
+        page_files = []
+        for ext in ("*.tsx", "*.jsx", "*.vue", "*.svelte"):
+            page_files.extend(pages_dir.glob(ext))
+        page_files.sort()
+
+        if not page_files:
+            return section + "_No page files found._\n\n"
+
+        for page_file in page_files:
             parsed = parse_tsx_file(page_file)
 
             section += md.heading(3, page_file.stem)
@@ -98,10 +123,10 @@ class VisualDesignGenerator(BaseGenerator):
             if components:
                 section += f"**Components:** {', '.join(c['name'] for c in components)}\n\n"
 
-            # Ant Design usage
+            # UI library usage
             ant = parsed.get("ant_design", [])
             if ant:
-                section += f"**Ant Design:** {', '.join(ant)}\n\n"
+                section += f"**UI Components:** {', '.join(ant)}\n\n"
 
             # API calls
             api_calls = parsed.get("api_calls", [])
@@ -118,18 +143,21 @@ class VisualDesignGenerator(BaseGenerator):
     def _build_shared_components(self) -> str:
         section = md.heading(2, "Shared Components")
 
-        comp_dir = self.project / "my-app" / "src" / "components"
+        if not self._profile or not self._profile.frontend_components_dir:
+            return section + "_No separate components directory detected._\n\n"
+
+        comp_dir = self.project / self._profile.frontend_components_dir
         if not comp_dir.is_dir():
-            # Check if components are inline
-            return section + "_No separate components directory — components are defined inline in page files._\n\n"
+            return section + "_Components directory not found._\n\n"
 
         rows = []
-        for comp_file in sorted(comp_dir.rglob("*.tsx")):
-            parsed = parse_tsx_file(comp_file)
-            components = parsed.get("components", [])
-            rel = str(comp_file.relative_to(self.project))
-            for c in components:
-                rows.append([c["name"], rel, str(parsed.get("line_count", 0))])
+        for ext in ("*.tsx", "*.jsx", "*.vue", "*.svelte"):
+            for comp_file in sorted(comp_dir.rglob(ext)):
+                parsed = parse_tsx_file(comp_file)
+                components = parsed.get("components", [])
+                rel = str(comp_file.relative_to(self.project))
+                for c in components:
+                    rows.append([c["name"], rel, str(parsed.get("line_count", 0))])
 
         if rows:
             section += md.table(["Component", "File", "Lines"], rows)

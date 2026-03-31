@@ -1,5 +1,21 @@
+# Documentation Watcher — Configuration
+# Point this at any project directory to auto-generate documentation.
+#
+# All fields are optional. If left empty, the watcher auto-detects
+# project structure, languages, and frameworks.
+
+# Project to analyze (can also be set via CLI arg or DOC_WATCHER_PROJECT_PATH env var)
 project_path: /project
+
+# Where to write generated docs (can also be set via --output or DOC_WATCHER_OUTPUT_PATH)
 output_path: /app/output
+
+# Project name override (auto-detected from package.json / pyproject.toml if empty)
+project_name: ""
+
+# Port to serve the dashboard on (set via --port, DOC_WATCHER_PORT, or here)
+# Leave empty to disable the HTTP server
+# port: 8080
 
 # How often to flush accumulated changes to docs
 flush_interval_seconds: 900  # 15 minutes
@@ -7,74 +23,27 @@ flush_interval_seconds: 900  # 15 minutes
 # Polling interval for file change detection (seconds)
 poll_interval_seconds: 3
 
-# File patterns to watch
-watch_includes:
-  - "app/**/*.py"
-  - "training/**/*.py"
-  - "my-app/src/**/*.tsx"
-  - "my-app/src/**/*.ts"
-  - "alembic/**/*.py"
-  - "docs/**/*.md"
-  - "*.py"
-  - "*.md"
-  - "*.yml"
-  - "*.yaml"
-
 # Patterns to exclude from watching
 watch_excludes:
   - "__pycache__"
   - ".git"
   - ".venv"
+  - "venv"
   - "node_modules"
   - "*.log"
   - "*.pyc"
   - ".DS_Store"
+  - "dist"
+  - "build"
+  - ".next"
 
 # Domain classification rules: pattern → domain name
-domain_rules:
-  "app/routes/": "Backend Routes"
-  "app/services/": "Backend Services"
-  "app/models.py": "Database Models"
-  "app/schemas.py": "API Schemas"
-  "app/main.py": "Application Core"
-  "app/auth.py": "Authentication"
-  "app/config.py": "Configuration"
-  "app/database.py": "Database"
-  "training/": "Training Worker"
-  "my-app/src/pages/": "Frontend Pages"
-  "my-app/src/App.tsx": "Frontend Core"
-  "my-app/src/components/": "Frontend Components"
-  "my-app/src/services/": "Frontend Services"
-  "alembic/": "Database Migrations"
-  "docker-compose.yml": "Infrastructure"
-  "Dockerfile": "Infrastructure"
-  "docs/": "Documentation"
+# Leave empty for auto-detection from directory structure
+domain_rules: {}
 
 # Per-document trigger patterns
-architecture_patterns:
-  - "app/models.py"
-  - "app/schemas.py"
-  - "app/main.py"
-  - "app/routes/"
-  - "app/services/"
-  - "docker-compose.yml"
-  - "Dockerfile"
-
-dataflow_patterns:
-  - "app/routes/"
-  - "app/services/"
-  - "my-app/src/services/"
-  - "my-app/src/pages/"
-  - "app/models.py"
-
-audit_patterns:
-  - "app/services/event_publisher.py"
-  - "app/services/event_store.py"
-  - "training/events.py"
-  - "app/routes/"
-  - "app/models.py"
-
-visual_patterns:
-  - "my-app/src/App.tsx"
-  - "my-app/src/pages/"
-  - "my-app/src/components/"
+# Leave empty for auto-detection based on discovered project structure
+architecture_patterns: []
+dataflow_patterns: []
+audit_patterns: []
+visual_patterns: []

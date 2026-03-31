@@ -31,7 +31,7 @@ class DevLogGenerator(BaseGenerator):
         file_stats = self._get_file_stats()
 
         content = md.heading(1, "Development Log & Progress")
-        content += f"> Auto-generated on {md.timestamp()} | Optoz AI Documentation Watcher\n\n"
+        content += f"> Auto-generated on {md.timestamp()} | Documentation Watcher\n\n"
         content += md.divider()
 
         content += md.heading(2, "Git History")
@@ -91,7 +91,7 @@ class DevLogGenerator(BaseGenerator):
         file_stats = self._get_file_stats()
 
         content = md.heading(1, "Development Log & Progress")
-        content += f"> Auto-generated on {md.timestamp()} | Optoz AI Documentation Watcher\n\n"
+        content += f"> Auto-generated on {md.timestamp()} | Documentation Watcher\n\n"
         content += md.divider()
 
         content += md.heading(2, "Git History")
@@ -142,6 +142,14 @@ class DevLogGenerator(BaseGenerator):
             ".py": "Python files",
             ".tsx": "React TSX files",
             ".ts": "TypeScript files",
+            ".jsx": "React JSX files",
+            ".js": "JavaScript files",
+            ".go": "Go files",
+            ".rs": "Rust files",
+            ".java": "Java files",
+            ".rb": "Ruby files",
+            ".vue": "Vue files",
+            ".svelte": "Svelte files",
             ".md": "Markdown docs",
             ".yml": "YAML configs",
             ".yaml": "YAML configs",
@@ -169,7 +177,7 @@ class DevLogGenerator(BaseGenerator):
         for root, dirs, files in os.walk(self.project):
             dirs[:] = [d for d in dirs if d not in self.config.watch_excludes]
             for fname in files:
-                if not any(fname.endswith(ext) for ext in (".py", ".tsx", ".ts")):
+                if not any(fname.endswith(ext) for ext in (".py", ".tsx", ".ts", ".jsx", ".js", ".go", ".rs", ".java", ".rb", ".vue", ".svelte")):
                     continue
                 abs_path = os.path.join(root, fname)
                 try:
